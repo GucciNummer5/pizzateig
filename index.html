@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pizzateig Rechner</title>
+  
+  <!-- PWA & App-Einstellungen -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#cc4400">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Service Worker Registrierung -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registriert:', reg))
+          .catch(err => console.log('Service Worker Fehler:', err));
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg-color: #f7f2ea;
+      --card-bg: #ffffff;
+      --card-inner: #fffdf9;
+      --border-color: #f1e9dd;
+      --accent-color: #cc4400;
+      --green-sub: #4b8b3b;
+      --text-main: #1a1a1a;
+      --text-muted: #736b63;
+      --btn-dark: #1f1d1b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 16px 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .inner-card {
+      background-color: var(--card-inner);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .inner-card:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+    }
+
+    .card-label-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .card-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-label-val {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-color);
+    }
+
+    /* Counter Controls (- 2 +) */
+    .counter-control {
+      display: grid;
+      grid-template-columns: 60px 1fr 60px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-counter {
+      background-color: var(--btn-dark);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      height: 48px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .counter-display {
+      background-color: var(--card-inner);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Size Grid Controls */
+    .grid-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn-grid-option {
+      background-color: var(--card-inner);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-grid-option.selected {
+      border: 2px solid var(--accent-color);
+      background-color: #ffffff;
+    }
+
+    /* Radio Controls (Method) */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .radio-option {
+      background-color: var(--card-inner);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+    }
+
+    .radio-option.selected {
+      border-color: var(--accent-color);
+    }
+
+    .radio-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+
+    .radio-sub {
+      font-size: 0.85rem;
+      color: var(--green-sub);
+    }
+
+    /* General Select */
+    select {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-inner);
+      font-size: 1rem;
+      color: var(--text-main);
+      font-weight: 600;
+      width: 100%;
+    }
+
+    /* Macros & Display */
+    .target-weight-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent-color);
+    }
+
+    .macro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .macro-item {
+      background-color: var(--card-inner);
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .macro-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent-color);
+      line-height: 1.1;
+    }
+
+    .macro-lbl {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .macro-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+      background-color: var(--card-inner);
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .ing-card {
+      background-color: var(--card-inner);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .ing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .ing-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-main);
+    }
+
+    .ing-amount {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--accent-color);
+      text-align: right;
+    }
+
+    .ing-sub {
+      font-size: 0.8rem;
+      color: var(--green-sub);
+      margin-top: 2px;
+    }
+
+    .ing-per-pizza {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .ing-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.3;
+    }
+
+    .instruction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background-color: var(--accent-color);
+      color: #ffffff;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    .step-text {
+      background-color: var(--card-inner);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: var(--text-main);
+      flex: 1;
+    }
+
+    .notes-box {
+      background-color: var(--card-inner);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .note-item {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Config Card (Pizzas & Size) -->
+  <div class="card">
+    
+    <!-- Pizza Counter -->
+    <div class="inner-card">
+      <div class="card-label-header">
+        <div class="card-label">PIZZEN ANZAHL</div>
+      </div>
+      <div class="counter-control">
+        <button class="btn-counter" onclick="changePizzaCount(-1)">-</button>
+        <div class="counter-display" id="pizza-count-display">2</div>
+        <button class="btn-counter" onclick="changePizzaCount(1)">+</button>
+      </div>
+    </div>
+
+    <!-- Pizza Size Grid -->
+    <div class="inner-card">
+      <div class="card-label-header">
+        <div class="card-label">PIZZA GRÖSSE</div>
+        <div class="card-label-val" id="size-label-display">28 cm</div>
+      </div>
+      <div class="grid-selector">
+        <button class="btn-grid-option" onclick="selectSize(15, this)">15 cm</button>
+        <button class="btn-grid-option" onclick="selectSize(20, this)">20 cm</button>
+        <button class="btn-grid-option" onclick="selectSize(25, this)">25 cm</button>
+        <button class="btn-grid-option selected" onclick="selectSize(28, this)">28 cm</button>
+        <button class="btn-grid-option" onclick="selectSize(32, this)">32 cm</button>
+        <button class="btn-grid-option" onclick="selectSize(35, this)">35 cm</button>
+      </div>
+    </div>
+
+    <!-- Mehltyp -->
+    <div class="inner-card">
+      <div class="card-label-header">
+        <div class="card-label">MEHLTYP</div>
+      </div>
+      <select id="flour-type" onchange="calculate()">
+        <option value="pizzamehl">Pizzamehl Typ 00 (Standard)</option>
+        <option value="weizen550">Weizenmehl Typ 550</option>
+        <option value="dinkel630">Dinkelmehl Typ 630</option>
+        <option value="highprotein">High-Protein Mix (85% Mehl + 15% Weizengluten)</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- Gärmethode -->
+  <div class="card">
+    <h2>Gärmethode</h2>
+    <div class="radio-group" id="method-options">
+      <div class="radio-option" onclick="selectMethod('quick', this)">
+        <div class="radio-title">1–2 Stunden Gehzeit</div>
+        <div class="radio-sub">1–2 Stunden Raumgärung</div>
+      </div>
+      <div class="radio-option" onclick="selectMethod('sameday', this)">
+        <div class="radio-title">Same Day Teig</div>
+        <div class="radio-sub">4–8 Stunden am selben Tag</div>
+      </div>
+      <div class="radio-option selected" onclick="selectMethod('cold', this)">
+        <div class="radio-title">1–5 Tage Kaltgärung</div>
+        <div class="radio-sub">1–5 Tage Reifung im Kühlschrank</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teigkugel Info & Nährwerte -->
+  <div class="card">
+    <h2>Teigkugel Info</h2>
+
+    <div class="inner-card">
+      <div class="card-label">ZIELGEWICHT PRO TEIGKUGEL</div>
+      <div class="target-weight-val" id="target-weight-display">170g</div>
+    </div>
+
+    <div style="margin-bottom: 6px;">
+      <div class="card-label">NÄHRWERTE PRO TEIGKUGEL</div>
+    </div>
+
+    <div class="macro-grid">
+      <div class="macro-item">
+        <div class="macro-val" id="macro-cal">371</div>
+        <div class="macro-lbl">Kalorien</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" id="macro-protein">24g</div>
+        <div class="macro-lbl">Eiweiß</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" id="macro-carbs">65g</div>
+        <div class="macro-lbl">Kohlenhydrate</div>
+      </div>
+      <div class="macro-item">
+        <div class="macro-val" id="macro-fat">2g</div>
+        <div class="macro-lbl">Fett</div>
+      </div>
+    </div>
+
+    <div class="macro-desc" id="macro-description">
+      Die Nährwerte enthalten das zum Ausrollen verwendete Mehl.
+    </div>
+  </div>
+
+  <!-- Zutaten -->
+  <div class="card">
+    <h2>Zutaten</h2>
+    <div id="ingredients-list"></div>
+  </div>
+
+  <!-- Anleitung -->
+  <div class="card">
+    <h2>Anleitung</h2>
+    <div class="instruction-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-text">Alle trockenen Zutaten in eine Schüssel geben und mit dem Schneebesen verquirlen.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-text" id="step-2-text">Gieße unter Rühren langsam das kälteste verfügbare Leitungswasser hinzu.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-text">Mische den Teig nach einer der folgenden Methoden: Küchenknetmaschine mit Knethaken auf niedrigster Stufe für ca. 5 Minuten; per Hand in der Schüssel für ca. 5–7 Minuten; oder im Food Processor für ca. 1–2 Minuten.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-text">Nicht überkneten. Nur so lange kneten, bis der Teig zusammenkommt und glatt wird.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-text" id="step-5-text">Lasse den Teig bei Raumtemperatur (möglichst nahe an 21°C) für 1–1,5 Stunden gehen.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">6</div>
+        <div class="step-text" id="step-6-text">Gärmethode ausführen.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">7</div>
+        <div class="step-text">Auf die gewählte Größe (cm) ausziehen und im vollständig vorgeheizten Ofen bei maximaler Temperatur backen. Die meisten Haushaltsöfen erreichen 250–280°C. Nutze für beste Ergebnisse einen Backstahl oder Pizzastein.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hinweise -->
+  <div class="card">
+    <h2>Hinweise</h2>
+    <div class="notes-box">
+      <div class="note-item">Der Teig zeigt nach etwa 30+ Stunden die besten Ergebnisse.</div>
+      <div class="note-item">Rund 72 Stunden Gärzeit gelten als optimaler Sweet Spot.</div>
+      <div class="note-item">Der Teig kann auch über 5 Tage hinaus verwendet werden.</div>
+      <div class="note-item">Wenn der Teig sehr luftig wird, eignet er sich hervorragend für Pizza mit dünnem Boden.</div>
+      <div class="note-item">Falls der Teig nach dem Reifen noch zu straff ist, gib ihm vor dem Ausziehen noch etwas Zeit zum Entspannen.</div>
+      <div class="note-item">Ein leichtes Einsprühen der Deckelinnenseite mit Wasser hilft, die Feuchtigkeit zu halten.</div>
+      <div class="note-item">Halte den Teig stets luftdicht verschlossen, damit er nicht austrocknet.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let pizzaCount = 2;
+  let pizzaSizeCm = 28;
+  let currentMethod = 'cold';
+
+  const diameterToWeight = {
+    15: 80,
+    20: 120,
+    25: 150,
+    28: 170,
+    32: 230,
+    35: 270
+  };
+
+  const flourNutrition = {
+    pizzamehl: { cal: 348, p: 12.0, c: 72.0, f: 1.0, name: "Pizzamehl Typ 00" },
+    weizen550: { cal: 343, p: 11.5, c: 71.5, f: 1.3, name: "Weizenmehl Typ 550" },
+    dinkel630: { cal: 347, p: 13.0, c: 68.9, f: 1.3, name: "Dinkelmehl Typ 630" },
+    highprotein: { cal: 370, p: 22.0, c: 60.0, f: 1.8, name: "High-Protein Mix (Mehl + Gluten)" }
+  };
+
+  function changePizzaCount(delta) {
+    pizzaCount += delta;
+    if (pizzaCount < 1) pizzaCount = 1;
+    if (pizzaCount > 20) pizzaCount = 20;
+    document.getElementById('pizza-count-display').innerText = pizzaCount;
+    calculate();
+  }
+
+  function selectSize(sizeCm, element) {
+    pizzaSizeCm = sizeCm;
+    document.getElementById('size-label-display').innerText = sizeCm + " cm";
+    
+    const buttons = document.querySelectorAll('.btn-grid-option');
+    buttons.forEach(btn => btn.classList.remove('selected'));
+    element.classList.add('selected');
+
+    calculate();
+  }
+
+  function selectMethod(method, element) {
+    currentMethod = method;
+    const options = document.querySelectorAll('.radio-option');
+    options.forEach(opt => opt.classList.remove('selected'));
+    element.classList.add('selected');
+    calculate();
+  }
+
+  function calculate() {
+    const targetWeight = diameterToWeight[pizzaSizeCm] || 170;
+    const flourTypeKey = document.getElementById('flour-type').value;
+
+    document.getElementById('target-weight-display').innerText = targetWeight + 'g';
+
+    let yeastPct = 0.25;
+    let hydrationPct = 65;
+    let waterText = "kältestes verfügbares Leitungswasser";
+    let step5Text = "Lasse den Teig nach dem Kneten 20 Minuten abgedeckt ruhen.";
+    let step6Text = "";
+
+    if (currentMethod === 'quick') {
+      yeastPct = 1.2;
+      waterText = "lauwarmes Wasser (ca. 30°C)";
+      step5Text = "Lasse den Teig bei Raumtemperatur (ca. 21°C) für 1 bis 2 Stunden gehen, bis er sich etwa verdoppelt hat.";
+      step6Text = "Forme nach der Gehzeit direkt die Teigkugeln, lasse sie 15 Minuten ruhen und verarbeite sie anschließend.";
+    } else if (currentMethod === 'sameday') {
+      yeastPct = 0.5;
+      waterText = "kühles Leitungswasser";
+      step5Text = "Lasse den Teig abgedeckt für 4 bis 8 Stunden bei Raumtemperatur (ca. 21°C) langsam gären.";
+      step6Text = "Teile den Teig ca. 2 Stunden vor dem Backen in Kugeln auf und lasse diese abgedeckt bei Raumtemperatur entspannen.";
+    } else {
+      // cold
+      yeastPct = 0.25;
+      waterText = "kältestes verfügbares Leitungswasser";
+      step5Text = "Lasse den Teig bei Raumtemperatur für 1 bis 1,5 Stunden anspringen.";
+      step6Text = "Forme Teigkugeln oder gib den Teig als Ganzes in luftdichte Behälter. Stelle ihn für 1–5 Tage (24 bis 120 Std.) in den Kühlschrank. Nimm den Teig mindestens 4–5 Stunden vor dem Backen heraus.";
+    }
+
+    // Dynamische Texte aktualisieren
+    document.getElementById('step-2-text').innerText = `Gieße unter Rühren langsam über 10–15 Sekunden das ${waterText} hinzu.`;
+    document.getElementById('step-5-text').innerText = step5Text;
+    document.getElementById('step-6-text').innerText = step6Text;
+
+    const saltPct = 3.0;
+    const totalPercentage = 100 + hydrationPct + yeastPct + saltPct;
+    const totalDoughWeight = pizzaCount * targetWeight;
+
+    const totalFlour = Math.round((totalDoughWeight / totalPercentage) * 100);
+    const totalWater = Math.round((totalFlour * hydrationPct) / 100);
+    const totalSalt = parseFloat(((totalFlour * saltPct) / 100).toFixed(1));
+    const totalYeast = parseFloat(((totalFlour * yeastPct) / 100).toFixed(2));
+
+    // Zutaten rendern
+    const ingContainer = document.getElementById('ingredients-list');
+    ingContainer.innerHTML = '';
+
+    if (flourTypeKey === 'highprotein') {
+      const breadFlour = Math.round(totalFlour * 0.85);
+      const gluten = Math.round(totalFlour * 0.15);
+
+      ingContainer.innerHTML += createIngCard(
+        "Brotmehl / Pizzamehl", 
+        breadFlour + "g", 
+        "85% der Mehlmenge", 
+        (breadFlour/pizzaCount).toFixed(0) + "g pro Pizza",
+        "Pizzamehl Typ 00 oder Weizenmehl Typ 550."
+      );
+
+      ingContainer.innerHTML += createIngCard(
+        "Weizengluten / Vital Wheat Gluten", 
+        gluten + "g", 
+        "15% der Mehlmenge", 
+        (gluten/pizzaCount).toFixed(0) + "g pro Pizza",
+        "Erhöht den Proteingehalt und stärkt die Teigstruktur."
+      );
+    } else {
+      ingContainer.innerHTML += createIngCard(
+        flourNutrition[flourTypeKey].name, 
+        totalFlour + "g", 
+        "100% der Mehlmenge", 
+        (totalFlour/pizzaCount).toFixed(0) + "g pro Pizza",
+        `Hauptzutat für die Teigbasis (${flourNutrition[flourTypeKey].name}).`
+      );
+    }
+
+    ingContainer.innerHTML += createIngCard(
+      "Wasser", 
+      totalWater + "g", 
+      hydrationPct + "% der Mehlmenge", 
+      (totalWater/pizzaCount).toFixed(0) + "g pro Pizza",
+      ""
+    );
+
+    ingContainer.innerHTML += createIngCard(
+      "Salz", 
+      totalSalt + "g", 
+      "3% der Mehlmenge", 
+      (totalSalt/pizzaCount).toFixed(1) + "g pro Pizza",
+      ""
+    );
+
+    ingContainer.innerHTML += createIngCard(
+      "Trockenhefe", 
+      totalYeast + "g", 
+      yeastPct + "% der Mehlmenge", 
+      (totalYeast/pizzaCount).toFixed(2) + "g pro Pizza",
+      ""
+    );
+
+    // Nährwerte pro Kugel
+    const flourPerBall = totalFlour / pizzaCount;
+    const nut = flourNutrition[flourTypeKey];
+
+    const cal = Math.round((flourPerBall * nut.cal) / 100 + 12);
+    const protein = Math.round((flourPerBall * nut.p) / 100);
+    const carbs = Math.round((flourPerBall * nut.c) / 100 + 3);
+    const fat = Math.round((flourPerBall * nut.f) / 100);
+
+    document.getElementById('macro-cal').innerText = cal;
+    document.getElementById('macro-protein').innerText = protein + "g";
+    document.getElementById('macro-carbs').innerText = carbs + "g";
+    document.getElementById('macro-fat').innerText = fat + "g";
+
+    document.getElementById('macro-description').innerText = 
+      `Die Nährwerte basieren auf ${nut.name} und enthalten das beim Ausrollen genutzte Mehl.`;
+  }
+
+  function createIngCard(title, amount, pct, perPizza, desc) {
+    return `
+      <div class="ing-card">
+        <div class="ing-header">
+          <div>
+            <div class="ing-title">${title}</div>
+            <div class="ing-sub">${pct}</div>
+          </div>
+          <div>
+            <div class="ing-amount">${amount}</div>
+            <div class="ing-per-pizza">${perPizza}</div>
+          </div>
+        </div>
+        ${desc ? `<div class="ing-desc">${desc}</div>` : ''}
+      </div>
+    `;
+  }
+
+  calculate();
+</script>
+
+</body>
+</html>
