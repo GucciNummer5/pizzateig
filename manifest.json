@@ -1,0 +1,15 @@
+{
+  "name": "Pizzateig Rechner",
+  "short_name": "Pizzateig",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f2ea",
+  "theme_color": "#cc4400",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3595/3595455.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
